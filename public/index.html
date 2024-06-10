@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGL</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Menu to welcome user -->
+  <div id="menu">
+    <h2>Test Game</h2>
+    <button class="play" onclick="play()">Play</button>
+  </div>
+  
+  <!-- Canvas to draw on -->
+  <canvas id="canvas"></canvas>
+  
+
+<!-- vertex shader -->
+<script id="vertex-shader-3d" type="x-shader/x-vertex">
+  attribute vec4 a_position;
+  attribute vec4 a_color;
+  attribute vec3 a_normal;
+  
+  varying vec4 v_color;
+  varying vec3 v_normal;
+  varying vec3 v_surfaceToLight;
+  
+  // applies transformations to vertices in world coordinates
+  uniform mat4 u_world;
+  // used for normal calculation
+  uniform mat4 u_worldMatrixInverseTranspose;
+  // model view projection (MVP) matrix that we 
+  // use to project vertices from world coordinates to camera coordinates
+  uniform mat4 u_viewMatrix;
+  // the position of the light in our world
+  uniform vec3 u_lightWorldPosition;
+  
+  void main() {
+    // Multiply the position by the matrix.
+    gl_Position = u_viewMatrix * a_position;
+  
+    // Pass the color to the fragment shader.
+    v_color = a_color;
+    // orient the normals and pass to the fragment shader
+    v_normal = mat3(u_worldMatrixInverseTranspose) * a_normal;
+
+    // compute the world position of the surface
+    vec3 surfaceWorldPosition = (u_world * a_position).xyz;
+
+    // compute the vector of the surface to the light
+    // and pass it to the fragment shader
+    v_surfaceToLight = u_lightWorldPosition - surfaceWorldPosition;  
+  }
+  </script>
+
+<!-- fragment shader -->
+<script id="fragment-shader-3d" type="x-shader/x-fragment">
+  precision mediump float;
+
+  varying vec4 v_color;
+  varying vec3 v_normal;
+  varying vec3 v_surfaceToLight;
+
+  // ambient light
+  // first three arguments is RGB color
+  // last argument is intensity of light
+  uniform vec4 u_ambientLight;
+  // directional light
+  uniform vec3 u_reverseLightDirection;
+  
+  void main() {
+    // Normalize the normal vector to make it a unit vector
+    vec3 normal = normalize(v_normal);
+
+    // Normalize the surface to light direction vector
+    vec3 surfaceToLightDirection = normalize(v_surfaceToLight);
+    
+    // Calculate the diffuse light component
+    float diffuseLight = max(dot(normal, surfaceToLightDirection), 0.0);
+
+    float directionalLight = dot(normal, u_reverseLightDirection);
+
+    // Calculate the final color by mixing the diffuse and ambient light components
+    vec3 diffuseColor = v_color.rgb * diffuseLight;
+    vec3 ambientColor = v_color.rgb * u_ambientLight.a; // Multiply by intensity
+
+    // Add the ambient color to the diffuse color
+    vec3 finalColor = diffuseColor * 0.6 + ambientColor + directionalLight * 0.3;
+
+    // Ensure the final color does not exceed 1.0 in any component
+    finalColor = clamp(finalColor, 0.0, 1.0);
+
+    // Set the final fragment color
+    gl_FragColor = vec4(finalColor, v_color.a);
+  }
+</script>
+  
+
+  <script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+  <script src="https://webglfundamentals.org/webgl/resources/webgl-lessons-ui.js"></script>
+  <script src="library.js"></script>
+  <script src="geometric_objects.js"></script>
+  <script src="scene.js"></script>
+  <script src="game.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
