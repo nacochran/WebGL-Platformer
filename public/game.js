@@ -33,6 +33,8 @@ class Actor {
     this.pos = VL.new(config.x, config.y, config.z);
     this.size = VL.new(config.width, config.height, config.depth);
     this.rot = VL.new(0, 0, 0);
+    // transformation matrix for transforming the vertices of geometry in world space
+    this.tMatrix = config.tMatrix || m4.identity();
 
     // movement
     this.vel = VL.new(0, 0, 0);
@@ -48,8 +50,30 @@ class Actor {
     this.onTime = 0;
   }
 
+  setTransformationMatrix() {
+    // Convert rotation angles from degrees to radians
+    var angleX = degToRad(this.rot.x);
+    var angleY = degToRad(this.rot.y);
+    var angleZ = degToRad(this.rot.z);
+
+    // Create rotation matrices for each axis
+    var rotationX = m4.xRotation(angleX);
+    var rotationY = m4.yRotation(angleY);
+    var rotationZ = m4.zRotation(angleZ);
+
+    // Multiply rotation matrices together to get the combined rotation matrix
+    var rotationMatrix = m4.multiply(rotationZ, m4.multiply(rotationY, rotationX));
+
+    // Create a translation matrix based on position
+    var translationMatrix = m4.translation(this.pos.x, this.pos.y, this.pos.z);
+
+    // Multiply rotation matrix by translation matrix to get the final transformation matrix
+    var finalMatrix = m4.multiply(rotationMatrix, translationMatrix);
+    this.tMatrix = finalMatrix;
+  }
+
   applyGravity() {
-    this.acc.y = (this.vel.y < this.tVel) ? game.g : 0;
+    this.acc.y = (this.vel.y < this.tVel) ? -game.g : 0;
   }
 
   applyDrag() {
@@ -96,8 +120,10 @@ class Player extends Actor {
           [55, 207, 25],  // Right face color
           [55, 207, 25]  // Left face color
         ];
+
+    var s = this.size.x;
     // using a cube based on the player's width... assuming the player is a cube right now
-    cube(this.pos.x, this.pos.y, this.pos.z, this.size.x, colors);
+    cube(s/2, s/2, s/2, s, colors, this);
     
   }
 
@@ -115,13 +141,15 @@ class Player extends Actor {
     this.rotate(keys.pressed('left'), keys.pressed('right'));
 
     // move and collide x
-    this.updateX();
+    //this.updateX();
 
     // move and collide y
-    this.updateY(keys.pressed('jump'));
+    //this.updateY(keys.pressed('jump'));
 
     // move and collide z
-    this.updateZ();
+    //this.updateZ();
+
+    this.setTransformationMatrix();
   }
 }
 

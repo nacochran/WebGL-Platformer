@@ -38,35 +38,28 @@ function setupWebGL() {
   var positionBuffer = gl.createBuffer();
   var colorBuffer = gl.createBuffer();
   var normalBuffer = gl.createBuffer();
-  
 
   refillBuffers = function() {
+    let combinedPositions = [];
+    let combinedColors = [];
+    let combinedNormals = [];
+
+    gl_objects.forEach(obj => {
+      combinedPositions.push(...obj.positions);
+      combinedColors.push(...obj.colors);
+      combinedNormals.push(...obj.normals);
+    });
+
     // Refill buffers for triangles
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(), gl.STATIC_DRAW);
-    setGeometry(gl, 'triangles');
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(combinedPositions), gl.STATIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(), gl.STATIC_DRAW);
-    setColors(gl, 'triangles');
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(combinedColors), gl.STATIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(), gl.STATIC_DRAW);
-    setNormals(gl, 'triangles');
-
-    // Refill buffers for lines (if any)
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(), gl.STATIC_DRAW);
-    setGeometry(gl, 'lines');
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(), gl.STATIC_DRAW);
-    setColors(gl, 'lines');
-
-    // Add other types as needed
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(combinedNormals), gl.STATIC_DRAW);
   };
-
-  refillBuffers();
 
   /** Create Renderer **/
   render = function() {
@@ -132,33 +125,46 @@ function setupWebGL() {
     var offset = 0;        // start at the beginning of the buffer
     gl.vertexAttribPointer(
         normalLocation, size, type, normalize, stride, offset);
-        
+    
+    // calculate camera matrix
     var viewMatrix = camera.view(gl);
-    var worldMatrix = m4.identity();
-    var matrixInverse = m4.inverse(worldMatrix);
-    var matrixInverseTranspose = m4.transpose(matrixInverse);
-
-    var ambientLight = [1.0, 1.0, 1.0, 0.5];
-
-    // Set the matrices
     gl.uniformMatrix4fv(matrixLocation, false, viewMatrix);
-    gl.uniformMatrix4fv(matrixInverseTransposeLocation, false, matrixInverseTranspose);
-    gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+
+    // add ambient light 
+    var ambientLight = [1.0, 1.0, 1.0, 0.5];
     gl.uniform4fv(ambientLightLocation,  ambientLight);
-    // set the light direction.
+
+    // add directional light
     gl.uniform3fv(reverseLightDirectionLocation, m4.normalize([0.5, 0.7, 1]));
 
-    // set the light position
+    // add point light
     gl.uniform3fv(lightWorldPositionLocation, [20, 30, 160]);
 
-    // Draw the geometry.
-    var primitiveType = gl.TRIANGLES;
-    var offset = 0;
-    var count = positions.triangles.length;
-    gl.drawArrays(primitiveType, offset, count);
+    let startIndex = 0;
+    gl_objects.forEach(object => {
+      // calculate world matrix
+      var worldMatrix = (object.targetObject === undefined) ? (m4.identity()) : (object.targetObject.tMatrix);
+      //console.log(object.tMatrix);
+      gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 
-    gl.drawArrays(gl.LINES, 0, positions.lines.length / 3);
+      // get the inverse of the world matrix
+      var matrixInverse = m4.inverse(worldMatrix);
+      var matrixInverseTranspose = m4.transpose(matrixInverse);
+      gl.uniformMatrix4fv(matrixInverseTransposeLocation, false, matrixInverseTranspose);
+
+      // Draw the geometry.
+      var primitiveType = gl.TRIANGLES;
+      var offset = startIndex;
+      var count = object.positions.length / 3;
+      gl.drawArrays(primitiveType, offset, count);
+
+      // increase startIndex for next object
+      startIndex += count;
+    });
   }
+
+  // initalize empty buffers
+  refillBuffers();
 }
 
 /** Setup Key Manager **/
@@ -185,9 +191,9 @@ function setupLevels() {
     design: function() {
       // add the players
       player = new Player({
-        x: 50,
-        y: 50,
-        z: 50,
+        x: 0,
+        y: 0,
+        z: 0,
         width: 50,
         height: 50,
         depth: 50
@@ -228,19 +234,19 @@ function runGame() {
   if (scene === 'menu') {
     // .. do stuff
   } else if (scene === 'game') {
-    // const moveSpeed = 2;  
-    // const rotationSpeed = 0.01;
-    // if (keys.pressed('w')) {
-    //   camera.updatePosition(moveSpeed);
-    // } else if (keys.pressed('s')) {
-    //   camera.updatePosition(-moveSpeed);
-    // }
+    const moveSpeed = 2;  
+    const rotationSpeed = 0.01;
+    if (keys.pressed('w')) {
+      camera.updatePosition(moveSpeed);
+    } else if (keys.pressed('s')) {
+      camera.updatePosition(-moveSpeed);
+    }
 
-    // if (keys.pressed('a')) {
-    //   camera.updateRotation(-rotationSpeed, 0);
-    // } else if (keys.pressed('d')) {
-    //   camera.updateRotation(rotationSpeed, 0); 
-    // }
+    if (keys.pressed('a')) {
+      camera.updateRotation(-rotationSpeed, 0);
+    } else if (keys.pressed('d')) {
+      camera.updateRotation(rotationSpeed, 0); 
+    }
 
     player.update();
   }

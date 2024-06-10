@@ -1,20 +1,17 @@
-var positions = {
-  triangles: [],
-  lines: []
-};
 
-var colors = {
-  triangles: [],
-  lines: []
-};
+// objects in these array are rendered by GL.TRIANGLES
+var gl_objects = [];
 
-var normals = {
-  triangles: []
-};
+function cube(x, y, z, size, colorsArrayForEachFace, targetObject) {
+  // create new object to be rendered by WebGL
+  // for now we just include a single positions/colors/normals array, although we can 
+  let gl_object = { 
+    positions: [], 
+    colors: [], 
+    normals: [],
+    targetObject: targetObject
+  };
 
-var strokeColor = [0, 0, 0];
-
-function cube(x, y, z, size, colorsArrayForEachFace) {
   var hs = size / 2; // half-size
   var vertices = [
     // Front face
@@ -84,14 +81,14 @@ function cube(x, y, z, size, colorsArrayForEachFace) {
 
   // Add vertices to positions.triangles array
   for (var i = 0; i < indices.length; i++) {
-    positions.triangles.push(vertices[indices[i] * 3], vertices[indices[i] * 3 + 1], vertices[indices[i] * 3 + 2]);
+    gl_object.positions.push(vertices[indices[i] * 3], vertices[indices[i] * 3 + 1], vertices[indices[i] * 3 + 2]);
   }
 
   // Add colors to colors.triangles array
   for (var i = 0; i < 6; i++) {
     var color = colorsArrayForEachFace[i];
     for (var j = 0; j < 6; j++) { // 6 vertices per face
-      colors.triangles.push(color[0], color[1], color[2]);
+      gl_object.colors.push(color[0], color[1], color[2]);
     }
   }
 
@@ -99,39 +96,12 @@ function cube(x, y, z, size, colorsArrayForEachFace) {
   for (var i = 0; i < 6; i++) {
     var normal = faceNormals[i];
     for (var j = 0; j < 6; j++) { // 6 vertices per face
-      normals.triangles.push(normal[0], normal[1], normal[2]);
+      gl_object.normals.push(normal[0], normal[1], normal[2]);
     }
   }
 
-
-  // Indices for drawing the cube edges with LINES
-  // var lineIndices = [
-  //   0, 1,  1, 2,  2, 3,  3, 0,  // front
-  //   4, 5,  5, 6,  6, 7,  7, 4,  // back
-  //   0, 4,  1, 7,  2, 6,  3, 5   // connections between front and back
-  // ];
-
-  // // Add vertices to positions.lines array
-  // for (var i = 0; i < lineIndices.length; i++) {
-  //   positions.lines.push(vertices[lineIndices[i] * 3], vertices[lineIndices[i] * 3 + 1], vertices[lineIndices[i] * 3 + 2]);
-  // }
-
-  // // Add colors to colors.lines array
-  // for (var i = 0; i < lineIndices.length; i++) {
-  //   colors.lines.push(strokeColor[0], strokeColor[1], strokeColor[2]);
-  // }
-}
-
-function setGeometry(gl, type) {
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions[type]), gl.STATIC_DRAW);
-}
-
-function setColors(gl, type) {
-  gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors[type]), gl.STATIC_DRAW);
-}
-
-function setNormals(gl, type) {
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals[type]), gl.STATIC_DRAW);
+  // add new object to render array to be iterated through
+  gl_objects.push(gl_object);
 }
 
 
