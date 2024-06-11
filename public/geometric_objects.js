@@ -103,3 +103,87 @@ function cube(x, y, z, size, colorsArrayForEachFace, targetObject) {
   // add new object to render array to be iterated through
   gl_objects.push(gl_object);
 }
+
+function cylinder(x, y, z, radius, height, colorsArrayForEachFace, targetObject, segments = 36) {
+  // create new object to be rendered by WebGL
+  let gl_object = { 
+    positions: [], 
+    colors: [], 
+    normals: [],
+    targetObject: targetObject
+  };
+
+  var hs = height / 2; // half-height
+  var angleStep = (2 * Math.PI) / segments;
+  
+  // Top and bottom vertices
+  for (var i = 0; i <= segments; i++) {
+    var angle = i * angleStep;
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+
+    // Top circle
+    gl_object.positions.push(x + radius * cos, y + hs, z + radius * sin);
+    // Bottom circle
+    gl_object.positions.push(x + radius * cos, y - hs, z + radius * sin);
+  }
+
+  // Side vertices
+  for (var i = 0; i <= segments; i++) {
+    var angle = i * angleStep;
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+
+    // Top edge
+    gl_object.positions.push(x + radius * cos, y + hs, z + radius * sin);
+    // Bottom edge
+    gl_object.positions.push(x + radius * cos, y - hs, z + radius * sin);
+  }
+
+  // Colors for top, bottom, and side
+  var topColor = colorsArrayForEachFace[0];
+  var bottomColor = colorsArrayForEachFace[1];
+  var sideColor = colorsArrayForEachFace[2];
+
+  // Add colors
+  for (var i = 0; i <= segments; i++) {
+    gl_object.colors.push(...topColor);
+    gl_object.colors.push(...bottomColor);
+  }
+  
+  for (var i = 0; i <= segments; i++) {
+    gl_object.colors.push(...sideColor);
+    gl_object.colors.push(...sideColor);
+  }
+
+  // Normals
+  for (var i = 0; i <= segments; i++) {
+    gl_object.normals.push(0, 1, 0); // Top normals
+    gl_object.normals.push(0, -1, 0); // Bottom normals
+  }
+
+  for (var i = 0; i <= segments; i++) {
+    var angle = i * angleStep;
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+
+    gl_object.normals.push(cos, 0, sin);
+    gl_object.normals.push(cos, 0, sin);
+  }
+
+  // Indices for top and bottom
+  for (var i = 0; i < segments; i++) {
+    gl_object.indices.push(i, i + 1, segments + 1); // Top face
+    gl_object.indices.push(segments + 2 + i, segments + 2 + i + 1, 2 * segments + 2); // Bottom face
+  }
+
+  // Indices for side
+  for (var i = 0; i < segments; i++) {
+    var start = 2 * (segments + 1) + 2 * i;
+    gl_object.indices.push(start, start + 1, start + 2);
+    gl_object.indices.push(start + 1, start + 3, start + 2);
+  }
+
+  // add new object to render array to be iterated through
+  gl_objects.push(gl_object);
+}
