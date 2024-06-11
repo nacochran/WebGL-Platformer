@@ -4,6 +4,11 @@
 var keys, camera;
 var render, refillBuffers;
 
+// lighting
+var ambientLight = [1.0, 1.0, 1.0, 0.5];
+var directionalLight = m4.normalize([0.5, 0.7, 1]);
+var pointLight = [100, 330, 400];
+
 function setupWebGL() {
   camera = new Camera();
 
@@ -130,15 +135,14 @@ function setupWebGL() {
     var viewMatrix = camera.view(gl);
     gl.uniformMatrix4fv(matrixLocation, false, viewMatrix);
 
-    // add ambient light 
-    var ambientLight = [1.0, 1.0, 1.0, 0.5];
+    // add ambient light
     gl.uniform4fv(ambientLightLocation,  ambientLight);
 
     // add directional light
-    gl.uniform3fv(reverseLightDirectionLocation, m4.normalize([0.5, 0.7, 1]));
+    gl.uniform3fv(reverseLightDirectionLocation, directionalLight);
 
     // add point light
-    gl.uniform3fv(lightWorldPositionLocation, [20, 30, 160]);
+    gl.uniform3fv(lightWorldPositionLocation, pointLight);
 
     let startIndex = 0;
     gl_objects.forEach(object => {
@@ -170,10 +174,11 @@ function setupWebGL() {
 /** Setup Key Manager **/
 function setupKeyManager() {
   keys = new KeyManager();
-  keys.register('up', 'Jump', 'ArrowUp');
+  keys.register('up', 'Move Forward', 'ArrowUp');
+  keys.register('down', 'Move Back', 'ArrowDown');
   keys.register('right', 'Move right', 'ArrowRight');
   keys.register('left', 'Move left', 'ArrowLeft');
-  keys.register('down', 'Ground pound', 'ArrowDown');
+  keys.register('space', 'Jump', " ");
 
   document.addEventListener('keydown', (event) => {
     keys.keyPressed(event.key);
@@ -203,7 +208,9 @@ function setupLevels() {
       for (var i = 0; i < 10; i ++) {
         for (var j = 0; j < 10; j++) {
           blocks.push(new Block({
-            position: [-100 + i * 50, -100, 0 + j * 50 ],
+            x: -100 + i * 50,
+            y: -100, 
+            z: 0 + j * 50,
             size: 50
           }));
         }
@@ -234,6 +241,7 @@ function runGame() {
   if (scene === 'menu') {
     // .. do stuff
   } else if (scene === 'game') {
+    // Move Camera
     const moveSpeed = 2;  
     const rotationSpeed = 0.01;
     if (keys.pressed('w')) {
@@ -241,13 +249,18 @@ function runGame() {
     } else if (keys.pressed('s')) {
       camera.updatePosition(-moveSpeed);
     }
-
     if (keys.pressed('a')) {
       camera.updateRotation(-rotationSpeed, 0);
     } else if (keys.pressed('d')) {
       camera.updateRotation(rotationSpeed, 0); 
     }
 
+    // update blocks
+    blocks.forEach(block => {
+      block.update();
+    });
+
+    // update player
     player.update();
   }
 

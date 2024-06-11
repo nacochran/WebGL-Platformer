@@ -4,6 +4,20 @@ function noop() {
   console.log('Undefined function.');
 }
 
+// 3D box collide
+// can be used to check for collisions between "bounding boxes" 
+// and simple rectangular prisms
+function boxCollide(b1, b2) {
+  return (
+          b1.pos.x + b1.size.x > b2.pos.x 
+       && b1.pos.x < b2.pos.x + b2.size.x
+       && b1.pos.y + b1.size.y > b2.pos.y
+       && b1.pos.y < b2.pos.y + b2.size.y
+       && b1.pos.z + b1.size.z > b2.pos.z
+       && b1.pos.z < b2.pos.z + b2.size.z
+  );
+}
+
 /* 
  * Game Class
  */
@@ -31,7 +45,7 @@ class Actor {
   constructor(config) {
     // position and orientation
     this.pos = VL.new(config.x, config.y, config.z);
-    this.size = VL.new(config.width, config.height, config.depth);
+    this.size = VL.new(config.width || config.size, config.height || config.size, config.depth || config.size);
     this.rot = VL.new(0, 0, 0);
     // transformation matrix for transforming the vertices of geometry in world space
     this.tMatrix = config.tMatrix || m4.identity();
@@ -81,14 +95,26 @@ class Actor {
     this.dragForce = (this.onObject) ? this.dragForce : game.airFriction;
   }
 
-  updateX() {
+  updateX(activateLeft, activateRight) {  
+    if (activateLeft && Math.abs(this.vel.x) < this.maxSpeed) {
+        this.acc.x = -0.2;
+        this.acc.x -= (this.vel.x > 0) ? this.dragForce/2 : 0;
+    } else if (activateRight && Math.abs(this.vel.x) < this.maxSpeed) {
+        this.acc.x = 0.2;
+        this.acc.x += (this.vel.x < 0) ? this.dragForce/2 : 0;
+    } else if (Math.abs(this.vel.x) > this.dragForce) {
+        this.acc.x = (this.vel.x < 0) ? this.dragForce : -this.dragForce;
+    } else {
+        this.vel.x = 0;
+    }
+
     this.pos.x += this.vel.x;
     this.vel.x += this.acc.x;
   }
 
   updateY(activateJump) {
-    if (activateJump && abs(this.vel.y) < 0.1 && abs(this.acc.y) < 0.1) {
-        this.vel.y = -5;
+    if (activateJump && Math.abs(this.vel.y) < 0.1 && Math.abs(this.acc.y) < 0.1) {
+        this.vel.y = 5;
     }
 
     this.applyGravity();
@@ -97,7 +123,19 @@ class Actor {
     this.vel.y += this.acc.y;
   }
 
-  updateZ() {
+  updateZ(activateUp, activateDown) {
+    if (activateUp && Math.abs(this.vel.z) < this.maxSpeed) {
+      this.acc.z = -0.2;
+      this.acc.z -= (this.vel.z > 0) ? this.dragForce/2 : 0;
+    } else if (activateDown && Math.abs(this.vel.z) < this.maxSpeed) {
+        this.acc.z = 0.2;
+        this.acc.z += (this.vel.z < 0) ? this.dragForce/2 : 0;
+    } else if (Math.abs(this.vel.z) > this.dragForce) {
+        this.acc.z = (this.vel.z < 0) ? this.dragForce : -this.dragForce;
+    } else {
+        this.vel.z = 0;
+    }
+
     this.pos.z += this.vel.z;
     this.vel.z += this.acc.z;
   }
@@ -122,9 +160,7 @@ class Player extends Actor {
         ];
 
     var s = this.size.x;
-    // using a cube based on the player's width... assuming the player is a cube right now
-    cube(s/2, s/2, s/2, s, colors, this);
-    
+    cube(-s/2, -s/2, -s/2, s, colors, this);
   }
 
   // rotate counterclockwise / clockwise
@@ -138,16 +174,28 @@ class Player extends Actor {
 
   update() {
     // orientation player
-    this.rotate(keys.pressed('left'), keys.pressed('right'));
-
-    // move and collide x
-    //this.updateX();
+    //this.rotate(keys.pressed('left'), keys.pressed('right'));
 
     // move and collide y
-    //this.updateY(keys.pressed('jump'));
+    this.updateY(keys.pressed('space'));
+    blocks.forEach(block => {
+      block.collideY(this);
+    });
+
+    // apply drag for x-z movement
+    this.applyDrag();
+
+    // move and collide x
+    this.updateX(keys.pressed('left'), keys.pressed('right'));
+    blocks.forEach(block => {
+      block.collideX(this);
+    });
 
     // move and collide z
-    //this.updateZ();
+    this.updateZ(keys.pressed('up'), keys.pressed('down'));
+    blocks.forEach(block => {
+      block.collideZ(this);
+    });
 
     this.setTransformationMatrix();
   }
@@ -158,10 +206,10 @@ var player;
 /* 
  * Block Class
 */
-class Block {
+class Block extends Actor {
   constructor (config) {
-    this.position = config.position;
-    this.size = config.size || 100;
+    super(config);
+
     this.type = config.type || 'stone';
   }
 
@@ -178,7 +226,50 @@ class Block {
           [200, 200, 200]  // Left face color
         ];
     }
-    cube(...this.position, this.size, colors);
+    var s = this.size.x;
+    cube(-s/2, -s/2, -s/2, s, colors, this);
+  }
+
+  collideX(obj) {
+    if (boxCollide(this, obj)) {
+      if (obj.x > this.x && obj.vel.x < 0) {
+        obj.x = this.x + this.size.x;
+        obj.vel.x = 0;
+      } else if (obj.x < this.x && obj.vel.x > 0) {
+        obj.x = this.x - obj.size.x;
+        obj.vel.x = 0;
+      }
+    }
+  }
+
+  collideY(obj) {
+    if (boxCollide(this, obj)) {
+      if (obj.pos.y < this.pos.y && obj.vel.y > 0) {
+          obj.pos.y = this.pos.y + this.size.y;
+          obj.vel.y *= -1;
+      } else if (obj.pos.y > this.pos.y) {
+          obj.y = this.pos.y - obj.size.y;
+          obj.vel.y = 0;
+          obj.acc.y = 0;
+          obj.dragForce = 0.5;
+          obj.onObject = true;
+          obj.onTime = 0;
+      }
+    }
+  }
+
+  collideZ(obj) {
+    if (obj.z > this.z && obj.vel.z < 0) {
+      obj.z = this.z + this.size.z;
+      obj.vel.z = 0;
+    } else if (obj.z < this.z && obj.vel.z > 0) {
+      obj.x = this.z - obj.size.z;
+      obj.vel.z = 0;
+    }
+  }
+
+  update() {
+    this.setTransformationMatrix();
   }
 }
 let blocks = [];

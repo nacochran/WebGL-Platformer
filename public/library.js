@@ -349,9 +349,12 @@ function multiplyMatrixAndVector(matrix, vector) {
 
 ///// Vector-Matrix Library /////
 var VL = {
-    new: function(x, y, z, u, v) {
-        return {x : x, y : y, z : z, u : u, v : v};
+    new: function(x, y, z) {
+        return {x : x, y : y, z : z};
     },
+    new2: function(x, y, z, u, v) {
+      return {x : x, y : y, z : z, u : u, v : v};
+  },
     dot: function(vec1, vec2) {
         return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
     },

@@ -81,7 +81,7 @@ function cube(x, y, z, size, colorsArrayForEachFace, targetObject) {
 
   // Add vertices to positions.triangles array
   for (var i = 0; i < indices.length; i++) {
-    gl_object.positions.push(vertices[indices[i] * 3], vertices[indices[i] * 3 + 1], vertices[indices[i] * 3 + 2]);
+    gl_object.positions.push(vertices[indices[i] * 3] + hs, vertices[indices[i] * 3 + 1] + hs, vertices[indices[i] * 3 + 2] + hs);
   }
 
   // Add colors to colors.triangles array
@@ -103,32 +103,3 @@ function cube(x, y, z, size, colorsArrayForEachFace, targetObject) {
   // add new object to render array to be iterated through
   gl_objects.push(gl_object);
 }
-
-
-// // Create cubes with different colors for each face
-// cube(0, 0, 100, 100, [
-//   [200,  70, 120], // Front face color
-//   [80, 70, 200],   // Back face color
-//   [70, 200, 210],  // Top face color
-//   [210, 100, 70],  // Bottom face color
-//   [200, 200, 70],  // Right face color
-//   [160, 160, 220]  // Left face color
-// ]);
-
-// cube(-100, 150, 100, 100, [
-//   [200,  70, 120], // Front face color
-//   [80, 70, 200],   // Back face color
-//   [70, 200, 210],  // Top face color
-//   [210, 100, 70],  // Bottom face color
-//   [200, 200, 70],  // Right face color
-//   [160, 160, 220]  // Left face color
-// ]);
-
-// cube(100, 150, 100, 100, [
-//   [200,  70, 120], // Front face color
-//   [80, 70, 200],   // Back face color
-//   [70, 200, 210],  // Top face color
-//   [210, 100, 70],  // Bottom face color
-//   [200, 200, 70],  // Right face color
-//   [160, 160, 220]   // Left face color
-// ]);
